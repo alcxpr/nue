@@ -5,11 +5,11 @@ import { createAsset } from './asset'
 import { createFile } from './file'
 
 export async function createSite(conf) {
-  const { root, ignore } = conf
+  const { root, ignore, base } = conf
 
   // assets
   const paths = sortAssets(await fswalk(root, { ignore }))
-  const files = await Promise.all(paths.map(path => createFile(root, path)))
+  const files = await Promise.all(paths.map(path => createFile(root, path, base)))
 
   // createAsset options
   const site_opts = { files, conf }
@@ -36,7 +36,7 @@ export async function createSite(conf) {
     if (asset) { asset.flush(); return asset }
 
     // add new one
-    const file = await createFile(root, path)
+    const file = await createFile(root, path, conf.base)
 
     if (file) {
       files.push(file)
@@ -88,5 +88,3 @@ export async function mergeSharedData(assets, data={}) {
 
   return data
 }
-
-

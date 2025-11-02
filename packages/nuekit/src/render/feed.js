@@ -6,7 +6,7 @@ const XML = '<?xml version="1.0" encoding="UTF-8"?>'
 
 export async function generateSitemap(assets, conf) {
   const origin = getOrigin(conf)
-  const { skip } = conf.sitemap
+  const { skip } = conf.sitemap || {}
 
   const pages = []
 

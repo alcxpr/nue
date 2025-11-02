@@ -11,7 +11,10 @@ export async function renderHead({ conf, data, assets, libs=[] }) {
 
   if (title) head.push(elem('title', renderTitle(title, data.title_template)))
 
-  if (favicon) head.push(elem('link', { rel: 'icon', href: favicon }))
+  if (favicon) {
+    const href = conf.base && favicon.startsWith('/') ? `${conf.base}${favicon}` : favicon
+    head.push(elem('link', { rel: 'icon', href }))
+  }
 
   // meta
   head.push(...renderMeta(data, libs))
@@ -31,7 +34,7 @@ export async function renderHead({ conf, data, assets, libs=[] }) {
 
 
   // all scripts
-  const scripts = renderScripts(assets)
+  const scripts = renderScripts(assets, conf.base)
 
   if (scripts.length || libs.length) {
     head.push(importMap(conf.import_map))
@@ -41,7 +44,8 @@ export async function renderHead({ conf, data, assets, libs=[] }) {
   // RSS feed
   if (conf.rss?.enabled) {
     const { title } = conf.rss
-    const link = elem('link', { rel: 'alternate', type: 'application/rss+xml', title, href: '/feed.xml' })
+    const href = conf.base ? `${conf.base}/feed.xml` : '/feed.xml'
+    const link = elem('link', { rel: 'alternate', type: 'application/rss+xml', title, href })
     head.push(link)
   }
 
@@ -85,13 +89,18 @@ function renderTitle(title, template) {
   return str?.replaceAll('**', '')
 }
 
-export function renderScripts(assets) {
+export function renderScripts(assets, base = '') {
   const scripts = assets.filter(f => ['.js', '.ts'].includes(f.ext) && f.dir != `@shared${sep}data`)
-  return scripts.map(s => elem('script', { src: `/${s.dir}/${s.name}.js`, type: 'module' }))
+  return scripts.map(s => {
+    const dir = s.dir ? `/${s.dir}` : '' // if dir happened to be empty
+    const src = `${dir}/${s.name}.js`
+    return elem('script', { src: base ? `${base}${src}` : src, type: 'module' })
+  })
 }
 
 export async function renderStyles(assets, conf={}) {
   const { inline_css } = conf?.design || {}
+  const { base = '' } = conf
   const css_files = assets.filter(file => file.is_css)
 
   if (conf.is_prod && inline_css) {
@@ -99,7 +108,10 @@ export async function renderStyles(assets, conf={}) {
     return [ elem('style', css) ]
   }
 
-  return css_files.map(file => elem('link', { rel: 'stylesheet', href: `/${file.path}` }))
+  return css_files.map(file => {
+    const href = `/${file.path}`
+    return elem('link', { rel: 'stylesheet', href: base ? `${base}${href}` : href })
+  })
 }
 
 export async function inlineCSS(assets, minify=true) {
@@ -119,11 +131,11 @@ function importMap(imports) {
 
 function ogImage(data) {
   const og = data.og_image || data.og
-  const { origin='' } = data
+  const { origin='', base='' } = data
 
   if (og) {
     const img = og[0] == '/' ? og : `/${data.dir}/${og}`
-    return (data.is_prod ? origin : '') + img
+    const path = base && img.startsWith('/') ? `${base}${img}` : img
+    return (data.is_prod ? origin : '') + path
   }
 }
-

@@ -1,7 +1,7 @@
 
 import { join, parse } from 'node:path'
-
-import { testDir, write, removeAll } from './test-utils'
+import { createSite } from '../src/site'
+import { testDir, write, removeAll, writeAll } from './test-utils'
 import { createFile, getFileInfo, getURL, getSlug } from '../src/file'
 
 
@@ -23,7 +23,6 @@ test('slug property', () => {
   expect(getSlug(parse('blog/entry.md'))).toBe('entry')
   expect(getSlug(parse('blog/index.html'))).toBe('')
 })
-
 
 test('getFileInfo', () => {
   const info = getFileInfo('blog/table.html')
@@ -65,8 +64,37 @@ test('createFile', async () => {
   await removeAll()
 })
 
+const CONF_WITH_BASE = {
+  root: testDir,
+  is_prod: true,
+  dist: join(testDir, '.dist'),
+  base: '/blog',
+  site: { origin: 'https://example.com', base: '/blog' },
+  collections: { posts: { include: ['posts/'] } }
+}
 
+describe('basepath', () => {
+  beforeEach(async () => {
+    await writeAll([
+      ['index.md', '# Home'],
+      ['posts/hello.md', '# Hello World'],
+      ['style.css', 'body { color: red; }'],
+      ['app.js', 'console.log("test")'],
+    ])
+  })
 
+  afterEach(async () => await removeAll())
 
+  test('URLs include base path', async () => {
+    const site = await createSite(CONF_WITH_BASE)
+    expect(site.get('index.md').url).toBe('/blog/')
+    expect(site.get('posts/hello.md').url).toBe('/blog/posts/hello')
+  })
 
-
+  test('rendered HTML links include base path', async () => {
+    const site = await createSite({ ...CONF_WITH_BASE, is_prod: false })
+    const html = await site.get('index.md').render()
+    expect(html).toInclude('href="/blog/style.css"')
+    expect(html).toInclude('src="/blog/app.js"')
+  })
+})

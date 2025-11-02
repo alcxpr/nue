@@ -43,7 +43,7 @@ export async function readSiteConf(args={}) {
 
   // dist
   conf.dist = join(root, '.dist')
-
+  conf.base = conf.site?.base || conf.base || ''
   return { ...conf, is_prod, root, ignore }
 }
 
@@ -79,4 +79,3 @@ export function mergeValue(conf, key, val) {
   // override (include, exclude, import_map)
   return conf[key] = val
 }
-

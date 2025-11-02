@@ -2,11 +2,11 @@
 import { parse, sep, join } from 'node:path'
 import { lstat } from 'node:fs/promises'
 
-export async function createFile(root, path) {
+export async function createFile(root, path, base = '') {
   try {
     const rootpath = join(root, path)
     const stat = await lstat(rootpath)
-    const info = getFileInfo(path)
+    const info = getFileInfo(path, base)
     const file = Bun.file(rootpath)
     const mtime = stat.mtime
     let cachedText = null
@@ -44,13 +44,13 @@ export async function createFile(root, path) {
   }
 }
 
-export function getFileInfo(path) {
+export function getFileInfo(path, base = '') {
   const info = parse(path)
   delete info.root
 
   const { ext, dir } = info
   const type = info.ext.slice(1)
-  const url = getURL(info)
+  const url = getURL(info, base)
   const slug = getSlug(info)
 
   if (dir.includes(sep)) info.basedir = dir.split(sep)[0]
@@ -58,8 +58,8 @@ export function getFileInfo(path) {
   return { ...info, path, type, url, slug, [`is_${type}`]: true }
 }
 
-export function getURL(file) {
-  let { name, base, ext, dir } = file
+export function getURL(file, base = '') {
+  let { name, base: filename, ext, dir } = file
 
   if (['.md', '.html'].includes(ext)) {
     if (name == 'index') name = ''
@@ -70,7 +70,8 @@ export function getURL(file) {
   const els = dir.split(sep)
   els.push(name + ext)
 
-  return `/${ els.join('/') }`.replace('//', '/')
+  const path = `/${ els.join('/') }`.replace('//', '/')
+  return base ? `${base}${path}` : path
 }
 
 export function getSlug(file) {
